@@ -1,0 +1,7 @@
+{
+  "venv": ".conda",
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Windows",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false
+}
