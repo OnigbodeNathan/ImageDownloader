@@ -56,7 +56,7 @@ def _extract_topic_phrases(clause: str) -> List[str]:
     return phrases
 
 
-def extract_key_points(paragraph: str, max_words: int = 1000, top_n: int = 10) -> List[str]:
+def extract_key_points(paragraph: str, max_words: int = 1000, top_n: int = 4) -> List[str]:
     """Extract topic phrases and sentential clauses from a paragraph into a short list.
 
     This extractor focuses on meaningful topics and clause-level highlights.
@@ -105,6 +105,6 @@ def extract_key_points(paragraph: str, max_words: int = 1000, top_n: int = 10) -
     return result
 
 
-def extract_key_points_batch(texts: Sequence[str], max_words: int = 1000, top_n: int = 10) -> List[List[str]]:
+def extract_key_points_batch(texts: Sequence[str], max_words: int = 1000, top_n: int = 4) -> List[List[str]]:
     """Process multiple paragraphs or documents in batch and return a list of results."""
     return [extract_key_points(text, max_words=max_words, top_n=top_n) for text in texts]

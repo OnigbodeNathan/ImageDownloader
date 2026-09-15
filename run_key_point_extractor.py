@@ -18,7 +18,7 @@ def main() -> None:
         print("No input provided.")
         return
 
-    points = extract_key_points(text, top_n=10)
+    points = extract_key_points(text)
     print("\nExtracted key points:")
     if not points:
         print("No key points found.")
@@ -26,7 +26,7 @@ def main() -> None:
         for index, point in enumerate(points, start=1):
             print(f"{index}. {point}")
 
-    # Save to file for key_point_search_tool
+    # Save to file for the image downloader workflow.
     output_file = Path("extractor_output.json")
     result = {
         "image_path": "extracted_text",
@@ -37,7 +37,7 @@ def main() -> None:
         json.dump([result], f, indent=2, ensure_ascii=False)
     
     print(f"\nResults saved to: {output_file}")
-    print(f"Use with key_point_search_tool: python key_point_search_tool.py --input {output_file}")
+    print(f"Download matching images with: python Github1.py --input {output_file}")
 
 
 if __name__ == "__main__":
