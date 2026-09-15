@@ -3,7 +3,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any, Callable, Dict, List, Sequence
 
 import requests
 from key_point_extractor import extract_key_points
@@ -18,6 +18,7 @@ IMAGE_SIZE = "large"
 IMAGE_COLOR = None
 SAVE_FOLDER = "pexels_images"
 REQUEST_TIMEOUT = 30
+ProgressCallback = Callable[[str], None]
 
 
 def _unique_queries(key_points: List[str]) -> List[str]:
@@ -69,11 +70,20 @@ def load_queries_from_text(text: str) -> List[str]:
     return queries
 
 
-def download_images_for_query(query: str, headers: Dict[str, str]) -> None:
+def download_images_for_query(
+    query: str,
+    headers: Dict[str, str],
+    on_progress: ProgressCallback | None = None,
+) -> int:
+    def report(message: str) -> None:
+        print(message)
+        if on_progress is not None:
+            on_progress(message)
+
     query_folder = os.path.join(SAVE_FOLDER, query.replace(" ", "_"))
     os.makedirs(query_folder, exist_ok=True)
 
-    print(f"\n🔹 Downloading up to {TOTAL_IMAGES_PER_QUERY} images for '{query}'...")
+    report(f"Downloading up to {TOTAL_IMAGES_PER_QUERY} images for '{query}'...")
 
     page = 1
     downloaded_count = 0
@@ -103,7 +113,7 @@ def download_images_for_query(query: str, headers: Dict[str, str]) -> None:
             images = response.json().get("photos", [])
 
             if not images:
-                print(f"⚠️ No more images found for '{query}'. Stopping download.")
+                report(f"No more images found for '{query}'. Stopping download.")
                 break
 
             for img in images:
@@ -116,9 +126,9 @@ def download_images_for_query(query: str, headers: Dict[str, str]) -> None:
                     image_response.raise_for_status()
                     with open(img_path, "wb") as file:
                         file.write(image_response.content)
-                    print(f"✅ Downloaded {downloaded_count} for '{query}': {img_path}")
+                    report(f"Downloaded {downloaded_count} for '{query}': {img_path}")
                 except Exception as e:
-                    print(f"⚠️ Error downloading {img_url}: {e}")
+                    report(f"Error downloading {img_url}: {e}")
 
                 if downloaded_count >= TOTAL_IMAGES_PER_QUERY:
                     break
@@ -127,10 +137,11 @@ def download_images_for_query(query: str, headers: Dict[str, str]) -> None:
             time.sleep(1)
 
         else:
-            print(f"❌ Error fetching images for '{query}': {response.status_code} {response.text}")
+            report(f"Error fetching images for '{query}': {response.status_code} {response.text}")
             break
 
-    print(f"🎉 Finished downloading {downloaded_count} images for '{query}'!")
+    report(f"Finished downloading {downloaded_count} images for '{query}'.")
+    return downloaded_count
 
 
 def build_argument_parser() -> argparse.ArgumentParser:

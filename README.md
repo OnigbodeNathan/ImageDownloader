@@ -21,6 +21,16 @@ terminal session used to run `Github1.py`.
 
 ## Image Workflow
 
+For a small desktop interface that connects extraction, optional Gemini research,
+and Pexels downloading in one place, run:
+
+```powershell
+python interface.py
+```
+
+The API keys can be entered in the interface or supplied through environment
+variables. Images are saved under `pexels_images`.
+
 Extract key points, then download matching images:
 
 ```powershell
