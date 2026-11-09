@@ -3,7 +3,7 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
-from typing import Any, Dict, List
+from typing import List
 
 from Github1 import download_images_for_query
 from key_point_extractor import extract_key_points
@@ -17,7 +17,6 @@ class WorkflowApp:
         self.root.geometry("980x700")
         self.root.minsize(760, 560)
         self.key_points: List[str] = []
-        self.search_results: Dict[str, Any] = {}
 
         self._build_ui()
 
@@ -52,7 +51,7 @@ class WorkflowApp:
         sources.grid(row=1, column=0, columnspan=2, sticky="w", pady=(12, 0))
         ttk.Label(sources, text="Sources:").pack(side="left", padx=(0, 8))
         ttk.Checkbutton(sources, text="Pexels", variable=self.pexels_enabled).pack(side="left", padx=(0, 8))
-        ttk.Checkbutton(sources, text="Gemini research", variable=self.gemini_enabled).pack(side="left", padx=(0, 8))
+        ttk.Checkbutton(sources, text="Gemini images", variable=self.gemini_enabled).pack(side="left", padx=(0, 8))
         ttk.Checkbutton(sources, text="Google Images", variable=self.google_enabled).pack(side="left")
         ttk.Button(source_frame, text="Extract key points", command=self.extract).grid(
             row=1, column=1, sticky="e", pady=(12, 0)
@@ -86,7 +85,11 @@ class WorkflowApp:
         self.google_engine_id.grid(row=3, column=1, sticky="ew", padx=(10, 0), pady=4)
         self.download_button = ttk.Button(run_frame, text="Run selected sources", command=self.start_workflow)
         self.download_button.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(14, 4))
-        ttk.Label(run_frame, text="Pexels -> pexels_images; Google -> google_images.", foreground="#666666").grid(
+        ttk.Label(
+            run_frame,
+            text="Gemini -> gemini_images; Pexels -> pexels_images; Google -> google_images.",
+            foreground="#666666",
+        ).grid(
             row=5, column=0, columnspan=2, sticky="w", pady=(2, 0)
         )
 
@@ -122,6 +125,7 @@ class WorkflowApp:
             self.extract()
         if not self.key_points:
             return
+        key_points = list(self.key_points)
         use_pexels = self.pexels_enabled.get()
         use_gemini = self.gemini_enabled.get()
         use_google = self.google_enabled.get()
@@ -132,13 +136,11 @@ class WorkflowApp:
         if use_pexels and not pexels_key:
             messagebox.showwarning("Missing Pexels key", "Enter a Pexels API key or set PEXELS_API_KEY.")
             return
-        source_text = self.source_text.get("1.0", "end").strip()
         gemini_key = self.gemini_key.get().strip() or os.getenv("GEMINI_API_KEY", "").strip()
         if use_gemini:
             if not gemini_key:
-                messagebox.showwarning("Missing Gemini key", "Enter a Gemini API key or disable Gemini research.")
+                messagebox.showwarning("Missing Gemini key", "Enter a Gemini API key or disable Gemini images.")
                 return
-            os.environ["GEMINI_API_KEY"] = gemini_key
         google_key = self.google_key.get().strip() or os.getenv("GOOGLE_API_KEY", "").strip()
         google_engine_id = self.google_engine_id.get().strip() or os.getenv("GOOGLE_SEARCH_ENGINE_ID", "").strip()
         if use_google and (not google_key or not google_engine_id):
@@ -153,41 +155,51 @@ class WorkflowApp:
         self.status.configure(text="Running workflow...")
         threading.Thread(
             target=self._run_workflow,
-            args=(source_text, use_pexels, use_gemini, use_google, google_key, google_engine_id),
+            args=(key_points, use_pexels, use_gemini, gemini_key, use_google, google_key, google_engine_id),
             daemon=True,
         ).start()
 
     def _run_workflow(
         self,
-        source_text: str,
+        key_points: List[str],
         use_pexels: bool,
         use_gemini: bool,
+        gemini_key: str,
         use_google: bool,
         google_key: str,
         google_engine_id: str,
     ) -> None:
         try:
-            if use_gemini:
-                from key_point_search_tool import search_key_points
-
-                self._ui_log("Searching key points with Gemini...")
-                self.search_results = search_key_points(source_text, count=5)
-                self._ui_log(f"Found context for {len(self.search_results.get('searches', []))} key point(s).")
             total = 0
+            if use_gemini:
+                from gemini_image_generation import generate_gemini_images
+
+                gemini_total = generate_gemini_images(
+                    key_points,
+                    gemini_key,
+                    images_per_query=5,
+                    on_progress=self._ui_log,
+                )
+                total += gemini_total
             if use_pexels:
                 headers = {"Authorization": os.environ["PEXELS_API_KEY"]}
-                for point in self.key_points:
+                for point in key_points:
                     total += download_images_for_query(point, headers, on_progress=self._ui_log)
             if use_google:
                 google_total = download_google_images(
-                    self.key_points,
+                    key_points,
                     google_key,
                     google_engine_id,
                     on_progress=self._ui_log,
                 )
                 total += google_total
-            self._ui_log(f"Workflow complete. Downloaded {total} image(s) to pexels_images.")
-            self.root.after(0, lambda: self.status.configure(text=f"Complete: {total} image(s) downloaded."))
+            self._ui_log(f"Workflow complete. Generated or downloaded {total} image(s).")
+            self.root.after(
+                0,
+                lambda: self.status.configure(
+                    text=f"Complete: {total} image(s) generated or downloaded."
+                ),
+            )
         except Exception as exc:
             self._ui_log(f"Workflow failed: {exc}")
             self.root.after(0, lambda: self.status.configure(text="Workflow failed. See activity log."))

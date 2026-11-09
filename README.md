@@ -1,6 +1,6 @@
 # ImageDownloader
 
-A small Python workflow for extracting key points from text and downloading matching images from Pexels.
+A small Python workflow for extracting key points from text and creating or downloading matching images.
 
 ## Setup
 
@@ -10,14 +10,25 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Set the Pexels API key:
+Set the Pexels API key if you want to use Pexels:
 
 ```powershell
 $env:PEXELS_API_KEY = "PASTE_YOUR_ACTIVE_PEXELS_API_KEY_HERE"
 ```
 
 Create or copy the key from the Pexels API dashboard. Set it in the same
-terminal session used to run `Github1.py`.
+terminal session used to run `Github1.py` or the interface.
+
+## Gemini image generation
+
+In the interface, select **Gemini images** and enter a Gemini API key. The
+workflow generates five images for each extracted key point and saves them
+under `gemini_images\<key point>`. It uses Google's
+`gemini-3.1-flash-lite-image` model by default. To choose another supported
+Gemini image model, set `GEMINI_IMAGE_MODEL` before starting the application.
+Image generation requires `google-genai` 2.23 or later, API access to the
+selected model, and may incur charges. Gemini-generated files are separate
+from images downloaded from Pexels or Google Images.
 
 ## Google Images
 
@@ -52,15 +63,15 @@ copyright restrictions.
 
 ## Image Workflow
 
-For a small desktop interface that connects extraction, optional Gemini research,
-and Pexels downloading in one place, run:
+For a small desktop interface that connects extraction, Gemini image generation,
+and optional Pexels or Google Images searches, run:
 
 ```powershell
 python interface.py
 ```
 
 The API keys can be entered in the interface or supplied through environment
-variables. Images are saved under `pexels_images`.
+variables. Images are saved under the folder for their selected source.
 
 Extract key points, then download matching images:
 
@@ -97,6 +108,7 @@ python key_point_search_tool.py --input extractor_output.json
 
 - `Github1.py`: key-point image downloader and primary workflow
 - `key_point_extractor.py`: local key-point extraction logic
+- `gemini_image_generation.py`: Gemini image generation and local saving
 - `google_image_search.py`: Google Custom Search image lookup and downloads
 - `run_key_point_extractor.py`: interactive extraction CLI
 - `test_key_point_extractor.py`: extractor tests
